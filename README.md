@@ -6,7 +6,7 @@ Supports **multi-client messaging**, **group chat**, and a simple command interf
 ---
 
 ## System Architecture
-<img width="595" height="667" alt="system architecture" src="https://github.com/user-attachments/assets/461be6ff-fcfc-45d0-8a07-5596418ad5ff" />
+<img width="1112" height="605" alt="system-architecture" src="https://github.com/user-attachments/assets/8a6fdb9b-6441-4ecd-ab7f-b57e9e09859c" />
 
 ---
 
