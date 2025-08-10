@@ -37,7 +37,8 @@ func main() {
 	handleSigint()
 
 	var err error
-	conn, err = net.Dial("tcp", "0.0.0.0:8081")
+	// conn, err = net.Dial("tcp", "0.0.0.0:8081")
+	conn, err = net.Dial("tcp", "13.200.235.191:8080")
 	if err != nil {
 		fmt.Println("connect:", err)
 		return
