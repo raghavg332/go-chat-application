@@ -1,55 +1,55 @@
-# C++ Multi-Threaded Chat Application
+# Go Multi-Goroutine Chat Application
 
-A high-performance, terminal-based chat system built in modern C++ with **POSIX sockets** and **ncurses**.  
+A high-performance, terminal-based chat system written in Go with **TCP sockets** and **goroutines**.  
 Supports **multi-client messaging**, **group chat**, and a simple command interface — engineered for concurrency, stability, and real-time feedback.
 
 ---
+
 ## System Architecture
 <img width="595" height="667" alt="system architecture" src="https://github.com/user-attachments/assets/461be6ff-fcfc-45d0-8a07-5596418ad5ff" />
 
 ---
+
 ## Message Flow
 <img width="1490" height="800" alt="message flow" src="https://github.com/user-attachments/assets/a027c1d5-89e4-4837-ae88-fa85cd20cbf6" />
 
 ---
+
 ## Features
 
 ### 🖥 Server
-- **Multi-threaded TCP server** with one thread per client.
+- **Concurrent TCP server** with one **goroutine per client** (Go’s M:N scheduler).
 - **Group chat support** (`/join <group>`, `/leave`, `/groups`).
-- **Global chat mode** for broadcasting to all connected users.
-- **User list** command (`/users`) to view participants in real-time.
-- **Thread-safe state management** with `std::mutex` to prevent race conditions.
-- **Graceful client disconnect handling**.
+- **Global chat** broadcasting to all connected users.
+- **User list** (`/users`) in real time.
+- **Thread-safe state management** with `sync.Mutex` to prevent race conditions.
+- **Graceful disconnect handling** with Ctrl+C cleanup.
 
 ### 💬 Client
-- **Ncurses-based UI** with split chat & input windows.
-- **Color-coded messages**:
-  - Your messages in **cyan**.
-  - Incoming user names/prefixes in **red**.
-  - System/global messages in **green**.
-- **Responsive input box** with prompt.
-- **Ctrl+C safe exit** — cleans up sockets and UI.
+- **Terminal UI** over stdin/stdout with ANSI escape sequences for clean display.
+- **Color-ready output** (easy to extend with ANSI color for user/prefix differentiation).
+- **Responsive input** box with prompt.
+- **Ctrl+C safe exit** — cleans up sockets before exiting.
+
+> For a full TUI, you can swap in a Go TUI library like `tcell` or `bubbletea` without changing the protocol.
 
 ---
 
 ## 🛠 Tech Stack
-- **Language:** C++17
-- **Libraries:** `pthread`, `ncurses`
-- **Protocols:** TCP (IPv4)
-- **Platform:** POSIX-compliant systems (Linux, macOS)
-- **Build:** `g++` with `-pthread -lncurses`
+- **Language:** Go 1.21+
+- **Stdlib:** `net`, `sync`, `os/signal`, `syscall`
+- **Protocol:** TCP (IPv4)
+- **Platform:** POSIX systems (Linux, macOS)
+- **Build/Run:** `go build`, `go run`, optional `-race` for race detection
 
 ---
 
 ## 📂 Project Structure
 ```
-├── server
-│   └── main.cpp # Multithreaded chat server
-│   └── main
-├── client
-│   └── main.cpp # Ncurses chat client
-│   └── main
+├── server/
+│   └── main.go     # Concurrent chat server (goroutine-per-connection)
+├── client/
+│   └── client.go   # Terminal chat client
 ├── testing/
 │   └── load_tester.py  # Async load tester for performance benchmarking
 └── README.md
@@ -59,27 +59,28 @@ Supports **multi-client messaging**, **group chat**, and a simple command interf
 
 ## 🚀 Getting Started
 
-### 1. Compile
+### 1) Build
 ```bash
-cd server
-g++ main.cpp -o main -pthread
-cd client
-g++ main.cpp -o main -pthread -lncurses
+# From repo root
+go build -o bin/server ./server
+go build -o bin/client ./client
 ```
 
-### 2. Run the server
+### 2) Run the server
 ```bash
-cd server
-./main
+./bin/server
+# or
+go run ./server
 ```
 By default, the server listens on **port 8081**.
 
-### 3. Run clients
+### 3) Run the client
 ```bash
-cd client
-./main
+./bin/client
+# or
+go run ./client
 ```
-Enter a username when prompted, then chat using:
+When prompted, enter a username, then chat using:
 - `/users` — List connected users
 - `/join <group>` — Create/join a group
 - `/groups` — List available groups
@@ -89,49 +90,43 @@ Enter a username when prompted, then chat using:
 
 ## 📊 Performance Benchmark
 
-All benchmarks were run on:
-- **AWS EC2 Free Tier** (t2.micro — 1 vCPU, 1 GB RAM)
-- **Amazon Linux (latest)**
-- Server compiled with `g++` on Amazon Linux
-- Clients simulated using the provided async load tester (`load_tester.py`), measuring **Time-to-First-Byte (TTFB)** for `/users` command responses.
-- Clients and server ran on different instances.
+Use the same `testing/load_tester.py` harness as the C++ version to measure Time-to-First-Byte (TTFB) for `/users` command responses.
 
-### **Baseline Run** — 100 concurrent clients
-| Metric                   | Value   |
-|--------------------------|---------|
-| Connections OK           | 200     |
-| Connections Failed       | 0       |
-| Requests Sent            | 1,500   |
-| Responses Observed       | 1,500   |
-| **p50 TTFB**              | 53.27 ms |
-| **p90 TTFB**              | 76.43 ms |
-| **p95 TTFB**              | 83.28 ms |
-| **p99 TTFB**              | 94.37 ms |
-| Bytes Sent               | 10,180  |
+**Example baseline (from earlier C++ benchmark on t2.micro):**
+
+| Metric                   | Value     |
+|--------------------------|-----------|
+| Connections OK           | 200       |
+| Connections Failed       | 0         |
+| Requests Sent            | 1,500     |
+| Responses Observed       | 1,500     |
+| **p50 TTFB**             | 53.27 ms  |
+| **p90 TTFB**             | 76.43 ms  |
+| **p95 TTFB**             | 83.28 ms  |
+| **p99 TTFB**             | 94.37 ms  |
+| Bytes Sent               | 10,180    |
 | Bytes Received           | 2,253,882 |
-| Duration                 | 30.02 s |
+| Duration                 | 30.02 s   |
 
----
-
-### **Scalability Sweep** — Increasing concurrent clients until degradation
+### Scalability Sweep
 | Clients | p50 TTFB (ms) | p90 TTFB (ms) | Connections OK | Connections Failed |
-|---------|--------------|--------------|----------------|--------------------|
-| 50      | 34.44        | 99.99        | 100            | 0                  |
-| 100     | 55.65        | 84.35        | 200            | 0                  |
-| 150     | 72.41        | 198.23       | 300            | 0                  |
-| 200     | 119.21       | 207.47       | 400            | 0                  |
-| 250     | 84.46        | 173.66       | 500            | 0                  |
-| 300     | 143.09       | 246.62       | 600            | 0                  |
-| 350     | 150.64       | 450.58       | 700            | 0                  |
-| **400** | **165.09**   | **401.11**   | **800**        | **0**              |
-| 450     | 233.21       | 832.76       | 900            | 0                  |
+|---------|---------------|---------------|----------------|--------------------|
+| 50      | 34.44         | 99.99         | 100            | 0                  |
+| 100     | 55.65         | 84.35         | 200            | 0                  |
+| 150     | 72.41         | 198.23        | 300            | 0                  |
+| 200     | 119.21        | 207.47        | 400            | 0                  |
+| 250     | 84.46         | 173.66        | 500            | 0                  |
+| 300     | 143.09        | 246.62        | 600            | 0                  |
+| 350     | 150.64        | 450.58        | 700            | 0                  |
+| **400** | **165.09**    | **401.11**    | **800**        | **0**              |
+| 450     | 233.21        | 832.76        | 900            | 0                  |
 
-**Peak stable concurrency (per criteria):** **400 concurrent clients** before median TTFB exceeded acceptable latency threshold.
+> Re-run benchmarks on the Go server to get updated performance metrics.
 
 ---
 
 ## 📈 Key Takeaways
-- Handles **100 concurrent clients** with **p50 latency ~53 ms** on a remote **t2.micro** instance.
-- Scales to **400 concurrent clients** before significant median latency growth (>160 ms).
-- Zero connection failures observed up to 450 concurrent clients in this environment.
-- Memory & CPU remained stable during testing; main bottleneck is **single-thread-per-client model** on limited CPU.
+- **Goroutine-per-client** model = simple code, high concurrency.
+- **sync.Mutex** ensures safe shared state for users/groups.
+- **Graceful shutdown** cleans up all connections.
+- On modest hardware (t2.micro), should scale to **hundreds of concurrent clients**.
