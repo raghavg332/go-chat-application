@@ -72,7 +72,9 @@ go build -o bin/client ./client
 # or
 go run ./server
 ```
-By default, the server listens on **port 8081**.
+By default, the server listens on **port 8080**.
+
+Note: An instance of the server is already hosted at 13.200.235.191:8080 that the client can easily connect to.
 
 ### 3) Run the client
 ```bash
